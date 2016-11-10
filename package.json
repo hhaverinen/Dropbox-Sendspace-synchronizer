@@ -1,0 +1,22 @@
+{
+  "name": "dropbox-sendspace-synchronizer",
+  "version": "1.0.0",
+  "description": "Synchronizes users files from dropbox to sendspace",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/hhaverinen/TIES532.git"
+  },
+  "author": "Henri Haverinen",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/hhaverinen/TIES532/issues"
+  },
+  "homepage": "https://github.com/hhaverinen/TIES532#readme",
+  "dependencies": {
+    "express": "^4.14.0"
+  }
+}
