@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/hhaverinen/TIES532#readme",
   "dependencies": {
+    "dropbox": "^2.4.0",
     "express": "^4.14.0"
   }
 }
