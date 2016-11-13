@@ -1,6 +1,7 @@
 var Dropbox = require('dropbox');
 var request = require('request');
 var xml2js = require('xml2js');
+var md5 = require('md5');
 
 var db_key = '3a30dgfp45ufpmh';
 var db_secret = '2hy2qujs4vdnxr4';
@@ -42,18 +43,28 @@ var listFiles = function(dbx, cursor) {
 var getSendspaceSessionkey = function() {
     var token;
     request('http://api.sendspace.com/rest/?method=auth.createtoken&api_key=LN5IKXSIF8&api_version=1.2', function(error, response, body) {
-        var parser = new xml2js.Parser();
-        
+        var parser = new xml2js.Parser({explicitArray: false});
         parser.parseString(body, function(err, result) {
-            token = result.result.token[0];
-            console.log(token);
+            token = result.result.token;
         });
+        
+        if (token) {
+            var email = 'henrin.testailu@gmail.com';
+            var pw = 'passwordhere';
+            var tokened_pw = md5(token + md5(pw).toLowerCase()).toLowerCase();
+            
+            request('http://api.sendspace.com/rest/?method=auth.login&token='+token+'&user_name='+email+'&tokened_password='+tokened_pw, function(error, response, body) {
+                parser.parseString(body, function(err, result) {
+                    return result.result.session_key;
+                });
+            });
+        }
     });
 }
 
 module.exports = function() {
     //listFiles(dbx);
-    getSendspaceSessionkey();
+    console.log(getSendspaceSessionkey()); // returns undefined because requests are made asynchronically
     
     return "Terve mualima!";
 }
