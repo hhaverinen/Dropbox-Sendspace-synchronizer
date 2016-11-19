@@ -90,36 +90,43 @@ SendSpace.prototype.getSessionkey = function() {
 }
 
 SendSpace.prototype.uploadFileToSendSpace = function(fileName, fileStream) {
-    // change to promise and refactor
-    
+    var self = this;
 
-    request('http://api.sendspace.com/rest/?method=upload.getinfo&session_key='+this.sessionKey, function(error, response, body) {
-        var parser = new xml2js.Parser({explicitArray: false});
-        parser.parseString(body, function(err, result) {
-            var uploadObj = result.result.upload.$;           
-            
+    return new Promise(function(resolve, reject) {
+        var uploadUrl = 'http://api.sendspace.com/rest/?method=upload.getinfo&session_key='+self.sessionKey;
+        makeRequest(uploadUrl).then(function(body) {
+            var uploadObj = body.result.upload.$;            
             var formData = {
                 MAX_FILE_SIZE: uploadObj.max_file_size,
                 UPLOAD_IDENTIFIER: uploadObj.upload_identifier,
                 extra_info: uploadObj.extra_info,
                 userfile: fileStream
             };
-            
+
             request.post({url:uploadObj.url, formData: formData}, function(error, response, body) {
                 if(error) {
-                    console.log(error);
+                    reject(error);
                 }
 
-                var respJson = this.sendSpaceUploadResponseToJson(body);
+                var respJson = sendSpaceUploadResponseToJson(body);
                 if(respJson.upload_status === 'ok') {
                     // rename the file since downloadStream gives 'donwload' to file name
-                    request('http://api.sendspace.com/rest/?method=files.setinfo&session_key='+sessionKey+'&file_id='+respJson.file_id+'&name='+fileName, function(error, response, body) {
-                        console.log(body);
+                    var renameUrl = 'http://api.sendspace.com/rest/?method=files.setinfo&session_key='+self.sessionKey+'&file_id='+respJson.file_id+'&name='+fileName;
+                    makeRequest(renameUrl).then(function(body) {
+                        resolve(body);
+                    }).catch(function(body) {
+                        reject(body);
                     });
+                } else {
+                    reject(respJson);
                 }
             });
-            
-        });
+
+
+        }).catch(function(body) {
+            reject(body);
+        });        
+
     });
 }
 

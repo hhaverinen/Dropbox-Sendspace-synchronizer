@@ -19,7 +19,12 @@ var listDropBoxFiles = function(dbx, cursor) {
         dbx.filesListFolder({ path: '', recursive: true })
             .then(function(response) {
                 response.entries.forEach(function(item) {
-                    console.log(item);                    
+                    console.log(item.name);
+                    ss.uploadFileToSendSpace(item.name, request.get(getDropBoxDownloadParams(item.path_display, db_accesstoken))).then(function(response) {
+			            console.log(response.result.file.$);
+	            	}).catch(function(response) {
+			            console.log(response);
+			        });
                 });
                 if (response.has_more) {
                     listFiles(dbx, response.cursor);
@@ -31,7 +36,12 @@ var listDropBoxFiles = function(dbx, cursor) {
         dbx.filesListFolderContinue({ cursor: cursor })
             .then(function(response) {
                 response.entries.forEach(function(item) {
-                    console.log(item);                    
+                    console.log(item.name);
+                    ss.uploadFileToSendSpace(item.name, request.get(getDropBoxDownloadParams(item.path_display, db_accesstoken))).then(function(response) {
+			            console.log(response.result.file.$);
+	            	}).catch(function(response) {
+			            console.log(response);
+			        });
                 });
                 if (response.has_more) {
                     listFiles(dbx, response.cursor);
@@ -61,27 +71,24 @@ var getDropBoxDownloadParams = function(filepath, authToken) {
 module.exports = function() {
     //listDropBoxFiles(dbx);
     //getSendspaceSessionkey(uploadFileToSendSpace);
-    /*
-    var options = {
-        url: 'https://content.dropboxapi.com/2/files/download',
-        headers: {
-            'Dropbox-API-Arg': '{"path": "/testi1.txt"}',
-            'Authorization': 'Bearer 8bL7cF9QDZAAAAAAAAAACchf4Ih1b_lcB_dVSnSUpcsZLmao1IU-FCXSjbK8bvi0'
-        }
-    };
-    
-    ss.uploadFileToSendSpace('kissakala.txt', request.get(getDropBoxDownloadParams("/testi1.txt", db_accesstoken)));
-    
-    */
-    
     
     ss.getSessionkey().then(function(response) {
-	console.log('SUCCESS!');
-        console.log(response);
+	console.log('=== SUCCESS!');
+	console.log('=== START SENDING FILES!');
+	listDropBoxFiles(dbx);
+	/*
+	ss.uploadFileToSendSpace('kissakala.txt', request.get(getDropBoxDownloadParams("/testi1.txt", db_accesstoken))).then(function(response) {
+	    console.log(response);
+	}).catch(function(response) {
+	    console.log(response);
+	});
+	*/
+
     }).catch(function(error){
-	console.log('FAIL!');
+	console.log('=== FAIL!');
         console.log(error);
     });
+	
     
     return "Terve mualima!";
 }
