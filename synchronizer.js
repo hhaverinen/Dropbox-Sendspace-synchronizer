@@ -10,7 +10,7 @@ var db_accesstoken = '8bL7cF9QDZAAAAAAAAAACchf4Ih1b_lcB_dVSnSUpcsZLmao1IU-FCXSjb
 var ss_key = 'LN5IKXSIF8';
 
 var dbx = new Dropbox({ accessToken: db_accesstoken });
-var ss = new SendSpace({ user: 'henrin.testailu@gmail', password: '', apiKey: ss_key });
+var ss = new SendSpace({ user: 'henrin.testailu@gmail.com', password: '', apiKey: ss_key });
 
 
 // gets all the files from dropbox recursively
@@ -76,8 +76,10 @@ module.exports = function() {
     
     
     ss.getSessionkey().then(function(response) {
+	console.log('SUCCESS!');
         console.log(response);
     }).catch(function(error){
+	console.log('FAIL!');
         console.log(error);
     });
     

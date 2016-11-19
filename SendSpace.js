@@ -6,60 +6,93 @@ var SendSpace;
 
 SendSpace = function (options) {
     options = options || {};
-    //TODO: getters and setters
     this.user = options.user;
     this.password = options.password;
     this.apiKey = options.apiKey;
     this.sessionKey = options.sessionKey;
-    
-    // this should be private method?
-    this.sendSpaceUploadResponseToJson = function(response) {
-        var responseObj = {};
-        var responseLines = response.split('\n');
-        responseLines.forEach(function(line) {
-            if(line) {
-                var splittedLine = line.split('=');
-                responseObj[splittedLine[0]] = splittedLine[1];
+}
+
+// private methods
+// is this possible to do async? Probably not performance issue anyhow.
+var sendSpaceUploadResponseToJson = function(response) {
+    var responseObj = {};
+    var responseLines = response.split('\n');
+    responseLines.forEach(function(line) {
+        if(line) {
+            var splittedLine = line.split('=');
+            responseObj[splittedLine[0]] = splittedLine[1];
+        }
+    });
+    return responseObj;
+}
+
+var xmlToJson = function(xml) {
+    return new Promise(function(resolve, reject) {
+        var parser = new xml2js.Parser({explicitArray: false});
+        parser.parseString(xml, function(error, result) {
+            if(error) {
+                reject(error);
             }
+            resolve(result);
         });
-        return responseObj;
-    }
+    });
+}
+
+var checkSendSpaceResponse = function(body) {
+    return new Promise(function(resolve, reject) {
+        if (body.result.$.status === 'fail') {
+            reject(body);
+        }
+        resolve(body);
+    });
+}
+
+var makeRequest = function (url) {
+    return new Promise(function(resolve, reject) {
+        request(url, function(error, response, body) {
+            if(error) {
+                reject(error);
+            }
+            // TODO: is there more elegant way to write this?
+            xmlToJson(body).then(checkSendSpaceResponse).then(function(body) {
+                resolve(body);
+            }).catch(function(body) {
+                reject(body);
+            });
+        });
+    });
 }
 
 // gets sendspace sessionkey for current session
 SendSpace.prototype.getSessionkey = function() {
-    // TODO: refactor
-    
-    return new Promise(function(resolve, reject) {
-        request('http://api.sendspace.com/rest/?method=auth.createtoken&api_version=1.2&api_key='+this.apiKey, function(error, response, body) {
-            resolve(body);
-            if (error) {
-                reject(error);
-            }
-            
-            var parser = new xml2js.Parser({explicitArray: false});
-            parser.parseString(body, function(err, result) {
-                var token = result.result.token;
+    var self = this;
 
-                if (token) {
-                    var email = this.user;
-                    var pw = this.password;
-                    var tokenedpw = md5(token + md5(pw).toLowerCase()).toLowerCase();
-                    
-                    request('http://api.sendspace.com/rest/?method=auth.login&token='+token+'&user_name='+email+'&tokened_password='+tokenedpw, function(error, response, body) {
-                        parser.parseString(body, function(err, result) {
-                            this.sessionKey = result.result.session_key;
-                            resolve(this.sessionKey);
-                        });
-                    });
-                }
+    return new Promise(function(resolve, reject) {
+        var tokenUrl = 'http://api.sendspace.com/rest/?method=auth.createtoken&api_version=1.2&api_key='+self.apiKey;        
+        makeRequest(tokenUrl).then(function(body) {
+            var token = body.result.token;
+            var email = self.user;
+            var pw = self.password;
+            var tokenedpw = md5(token + md5(pw).toLowerCase()).toLowerCase();
+            var authUrl = 'http://api.sendspace.com/rest/?method=auth.login&token='+token+'&user_name='+email+'&tokened_password='+tokenedpw;
+
+            makeRequest(authUrl).then(function(body) {
+                self.sessionKey = body.result.session_key;
+                resolve(self.sessionKey);
+            }).catch(function(body) {
+                reject(body);
             });
+
+        }).catch(function(body) {
+            reject(body);
         });
     });
 }
 
 SendSpace.prototype.uploadFileToSendSpace = function(fileName, fileStream) {
     // change to promise and refactor
+    
+
     request('http://api.sendspace.com/rest/?method=upload.getinfo&session_key='+this.sessionKey, function(error, response, body) {
         var parser = new xml2js.Parser({explicitArray: false});
         parser.parseString(body, function(err, result) {
