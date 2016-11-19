@@ -89,6 +89,7 @@ SendSpace.prototype.getSessionkey = function() {
     });
 }
 
+// uploads file to the sendspace
 SendSpace.prototype.uploadFileToSendSpace = function(fileName, fileStream) {
     var self = this;
 
@@ -127,6 +128,19 @@ SendSpace.prototype.uploadFileToSendSpace = function(fileName, fileStream) {
             reject(body);
         });        
 
+    });
+}
+
+SendSpace.prototype.getSendSpaceFolderContents = function(folderId) {    
+    var self = this;    
+    
+    return new Promise(function(resolve, reject) {
+        var url = 'http://api.sendspace.com/rest/?method=folders.getcontents&session_key='+self.sessionKey+'&folder_id='+folderId;
+        makeRequest(url).then(function(body) {
+            resolve(body);
+        }).catch(function(body) {
+            reject(body);
+        });
     });
 }
 

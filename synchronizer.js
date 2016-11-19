@@ -52,17 +52,11 @@ var listDropBoxFiles = function(dbx, cursor) {
     }
 }
 
-var listSendSpaceFiles = function(session_key) {
-    request('http://api.sendspace.com/rest/?method=folders.getcontents&session_key='+session_key+'&folder_id=0', function(error, response, body) {
-        console.log(body);
-    });
-}
-
 var getDropBoxDownloadParams = function(filepath, authToken) {
     return {
         url: 'https://content.dropboxapi.com/2/files/download',
         headers: {
-            'Dropbox-API-Arg': '{"path": "'+filepath+'"}',
+            'Dropbox-API-Arg': JSON.stringify({path: filepath}),
             'Authorization': 'Bearer '+authToken
         }
     }
@@ -73,17 +67,14 @@ module.exports = function() {
     //getSendspaceSessionkey(uploadFileToSendSpace);
     
     ss.getSessionkey().then(function(response) {
-	console.log('=== SUCCESS!');
-	console.log('=== START SENDING FILES!');
-	listDropBoxFiles(dbx);
-	/*
-	ss.uploadFileToSendSpace('kissakala.txt', request.get(getDropBoxDownloadParams("/testi1.txt", db_accesstoken))).then(function(response) {
-	    console.log(response);
-	}).catch(function(response) {
-	    console.log(response);
-	});
-	*/
-
+	    console.log('=== SUCCESS!');
+	    //console.log('=== START SENDING FILES!');
+	    //listDropBoxFiles(dbx);
+        ss.getSendSpaceFolderContents(0).then(function(response) {
+            console.log(response);
+        }).catch(function(response) {
+            console.log(response);
+        });
     }).catch(function(error){
 	console.log('=== FAIL!');
         console.log(error);
