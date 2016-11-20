@@ -1,16 +1,12 @@
 var Dropbox = require('dropbox');
-var SendSpace = require('./SendSpace');
+var SendSpace = require('./SendSpaceClient/SendSpace');
 var request = require('request');
-var xml2js = require('xml2js');
-var md5 = require('md5');
 
-var db_key = '3a30dgfp45ufpmh';
-var db_secret = '2hy2qujs4vdnxr4';
-var db_accesstoken = '8bL7cF9QDZAAAAAAAAAACchf4Ih1b_lcB_dVSnSUpcsZLmao1IU-FCXSjbK8bvi0'; //TODO: get this with OAUTH
-var ss_key = 'LN5IKXSIF8';
+var dbConf = require('./config/dropboxConfig');
+var ssConf = require('./config/sendspaceConfig');
 
-var dbx = new Dropbox({ accessToken: db_accesstoken });
-var ss = new SendSpace({ user: 'henrin.testailu@gmail.com', password: '', apiKey: ss_key });
+var dbx = new Dropbox(dbConf);
+var ss = new SendSpace(ssConf);
 
 
 // gets all the files from dropbox recursively
@@ -19,15 +15,17 @@ var listDropBoxFiles = function(dbx, cursor) {
         dbx.filesListFolder({ path: '', recursive: true })
             .then(function(response) {
                 response.entries.forEach(function(item) {
-                    console.log(item.name);
-                    ss.uploadFileToSendSpace(item.name, request.get(getDropBoxDownloadParams(item.path_display, db_accesstoken))).then(function(response) {
+                    console.log(item);
+                    /*
+                    ss.uploadFileToSendSpace(item.name, request.get(getDropBoxDownloadParams(item.path_display, dbConf.accessToken))).then(function(response) {
 			            console.log(response.result.file.$);
 	            	}).catch(function(response) {
 			            console.log(response);
 			        });
+			        */
                 });
                 if (response.has_more) {
-                    listFiles(dbx, response.cursor);
+                    listDropBoxFiles(dbx, response.cursor);
             }})
             .catch(function(error) {
                 console.log(error);
@@ -36,15 +34,17 @@ var listDropBoxFiles = function(dbx, cursor) {
         dbx.filesListFolderContinue({ cursor: cursor })
             .then(function(response) {
                 response.entries.forEach(function(item) {
-                    console.log(item.name);
-                    ss.uploadFileToSendSpace(item.name, request.get(getDropBoxDownloadParams(item.path_display, db_accesstoken))).then(function(response) {
+                    console.log(item);
+                    /*
+                    ss.uploadFileToSendSpace(item.name, request.get(getDropBoxDownloadParams(item.path_display, dbConf.accessToken))).then(function(response) {
 			            console.log(response.result.file.$);
 	            	}).catch(function(response) {
 			            console.log(response);
 			        });
+			        */
                 });
                 if (response.has_more) {
-                    listFiles(dbx, response.cursor);
+                    listDropBoxFiles(dbx, response.cursor);
             }})
             .catch(function(error) {
                 console.log(error);
@@ -70,11 +70,19 @@ module.exports = function() {
 	    console.log('=== SUCCESS!');
 	    //console.log('=== START SENDING FILES!');
 	    //listDropBoxFiles(dbx);
-        ss.getSendSpaceFolderContents(0).then(function(response) {
+
+        ss.getAllFolders().then(function(response) {
             console.log(response);
+            /*
+            response.result.folder.forEach(function(item) {
+                console.log(item);
+            });
+            */
+
         }).catch(function(response) {
             console.log(response);
         });
+
     }).catch(function(error){
 	console.log('=== FAIL!');
         console.log(error);

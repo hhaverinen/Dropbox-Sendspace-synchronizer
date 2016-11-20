@@ -131,6 +131,28 @@ SendSpace.prototype.uploadFileToSendSpace = function(fileName, fileStream) {
     });
 }
 
+SendSpace.prototype.getAllFolders = function() {
+    var self = this;
+
+    return new Promise(function(resolve, reject) {
+        var url = 'http://api.sendspace.com/rest/?method=folders.getall&session_key='+self.sessionKey;
+        makeRequest(url).then(function(body) {
+            var folders = body.result.folder;
+            var jsonFolders = {};
+            if(Array.isArray(folders)) {
+                folders.forEach(function(item) {
+                    jsonFolders[item.$.name] = {id: item.$.id, parentId: item.$.parent_folder_id};
+                });
+            } else {
+                jsonFolders[folders.$.name] = {id: folders.$.id, parentId: folders.$.parent_folder_id};
+            }
+            resolve(jsonFolders);
+        }).catch(function(body) {
+            reject(body);
+        })
+    });
+}
+
 SendSpace.prototype.getSendSpaceFolderContents = function(folderId) {    
     var self = this;    
     
