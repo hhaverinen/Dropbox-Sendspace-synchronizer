@@ -10,6 +10,9 @@ SendSpace = function (options) {
     this.password = options.password;
     this.apiKey = options.apiKey;
     this.sessionKey = options.sessionKey;
+
+    this.folders;
+    this.files;
 }
 
 // private methods
@@ -64,7 +67,7 @@ var makeRequest = function (url) {
 }
 
 // gets sendspace sessionkey for current session
-SendSpace.prototype.getSessionkey = function() {
+SendSpace.prototype.startSession = function() {
     var self = this;
 
     return new Promise(function(resolve, reject) {
@@ -89,6 +92,19 @@ SendSpace.prototype.getSessionkey = function() {
     });
 }
 
+SendSpace.prototype.endSession = function() {
+    var self = this;
+
+    return new Promise(function (resolve, reject) {
+        var logoutUrl = 'http://api.sendspace.com/rest/?method=auth.logout&session_key='+self.sessionKey;
+        makeRequest(logoutUrl).then(function(body) {
+            resolve(body);
+        }).catch(function(body) {
+            reject(body);
+        });
+    });
+}
+
 // uploads file to the sendspace
 SendSpace.prototype.uploadFileToSendSpace = function(fileName, fileStream) {
     var self = this;
@@ -96,7 +112,7 @@ SendSpace.prototype.uploadFileToSendSpace = function(fileName, fileStream) {
     return new Promise(function(resolve, reject) {
         var uploadUrl = 'http://api.sendspace.com/rest/?method=upload.getinfo&session_key='+self.sessionKey;
         makeRequest(uploadUrl).then(function(body) {
-            var uploadObj = body.result.upload.$;            
+            var uploadObj = body.result.upload.$;
             var formData = {
                 MAX_FILE_SIZE: uploadObj.max_file_size,
                 UPLOAD_IDENTIFIER: uploadObj.upload_identifier,
@@ -122,12 +138,9 @@ SendSpace.prototype.uploadFileToSendSpace = function(fileName, fileStream) {
                     reject(respJson);
                 }
             });
-
-
         }).catch(function(body) {
             reject(body);
-        });        
-
+        });
     });
 }
 
@@ -146,6 +159,8 @@ SendSpace.prototype.getAllFolders = function() {
             } else {
                 jsonFolders[folders.$.name] = {id: folders.$.id, parentId: folders.$.parent_folder_id};
             }
+
+            self.folders = jsonFolders;
             resolve(jsonFolders);
         }).catch(function(body) {
             reject(body);
@@ -154,11 +169,12 @@ SendSpace.prototype.getAllFolders = function() {
 }
 
 SendSpace.prototype.getSendSpaceFolderContents = function(folderId) {    
-    var self = this;    
+    var self = this;
     
     return new Promise(function(resolve, reject) {
         var url = 'http://api.sendspace.com/rest/?method=folders.getcontents&session_key='+self.sessionKey+'&folder_id='+folderId;
         makeRequest(url).then(function(body) {
+            // TODO populate files json?
             resolve(body);
         }).catch(function(body) {
             reject(body);
@@ -166,4 +182,53 @@ SendSpace.prototype.getSendSpaceFolderContents = function(folderId) {
     });
 }
 
+SendSpace.prototype.getAllFoldersAndFiles = function() {
+    var self = this;
+
+    return new Promise(function(resolve, reject) {
+        self.getAllFolders().then(function (folders) {
+            var folderArray = [];
+            for (var k in folders) {
+                folderArray.push(folders[k].id);
+            }
+
+            Promise.all(
+                folderArray.map(self.getSendSpaceFolderContents, self)
+            ).then(function (body) {
+                resolve(body);
+            }).catch(function (body) {
+                reject(body);
+            })
+        });
+    });
+}
+
+var filesParentExists = function(name, parent) {
+    return files.name.id === parent;
+}
+
+var foldersParentExists = function(name, parent) {
+    return files.name.parentId === parent;
+}
+
+SendSpace.prototype.fileExists = function(filepath) {
+    //TODO: not tested
+    var pathArray = filepath.substring(1).split("/");
+    if (this.files && this.folders && pathArray.length > 0) {
+        var parentId = 0; // initialize this with sendspace root folderId
+        for(var i = 0; i < pathArray.length; i++) {
+            if (i === pathArray.length - 1) {
+                return filesParentExists(pathArray[i], parentId);
+            } else {
+                if (foldersParentExists(pathArray[i], parentId)) {
+                    parentId = folders.pathArray[i].id;
+                } else {
+                    return false;
+                }
+            }
+        }
+    }
+
+    return false;
+}
 module.exports = SendSpace;

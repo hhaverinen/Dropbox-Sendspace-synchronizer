@@ -5,48 +5,48 @@ var request = require('request');
 var dbConf = require('./config/dropboxConfig');
 var ssConf = require('./config/sendspaceConfig');
 
-var dbx = new Dropbox(dbConf);
-var ss = new SendSpace(ssConf);
-
-
 // gets all the files from dropbox recursively
-var listDropBoxFiles = function(dbx, cursor) {
+var getAllDropBoxFilesAndFolders = function(dbx, ss, cursor) {
     if (!cursor) {
         dbx.filesListFolder({ path: '', recursive: true })
             .then(function(response) {
+                /*
                 response.entries.forEach(function(item) {
                     console.log(item);
-                    /*
+
                     ss.uploadFileToSendSpace(item.name, request.get(getDropBoxDownloadParams(item.path_display, dbConf.accessToken))).then(function(response) {
 			            console.log(response.result.file.$);
 	            	}).catch(function(response) {
 			            console.log(response);
 			        });
-			        */
+
                 });
+                */
                 if (response.has_more) {
-                    listDropBoxFiles(dbx, response.cursor);
-            }})
-            .catch(function(error) {
+                    getAllDropBoxFilesAndFolders(dbx, ss, response.cursor);
+                }
+            }).catch(function(error) {
                 console.log(error);
             });
     } else {
         dbx.filesListFolderContinue({ cursor: cursor })
             .then(function(response) {
+                /*
                 response.entries.forEach(function(item) {
                     console.log(item);
-                    /*
+
                     ss.uploadFileToSendSpace(item.name, request.get(getDropBoxDownloadParams(item.path_display, dbConf.accessToken))).then(function(response) {
 			            console.log(response.result.file.$);
 	            	}).catch(function(response) {
 			            console.log(response);
 			        });
-			        */
+
                 });
+                */
                 if (response.has_more) {
-                    listDropBoxFiles(dbx, response.cursor);
-            }})
-            .catch(function(error) {
+                    getAllDropBoxFilesAndFolders(dbx, ss, response.cursor);
+                }
+            }).catch(function(error) {
                 console.log(error);
             });
     }
@@ -63,28 +63,31 @@ var getDropBoxDownloadParams = function(filepath, authToken) {
 }
 
 module.exports = function() {
-    //listDropBoxFiles(dbx);
-    //getSendspaceSessionkey(uploadFileToSendSpace);
-    
-    ss.getSessionkey().then(function(response) {
-	    console.log('=== SUCCESS!');
-	    //console.log('=== START SENDING FILES!');
-	    //listDropBoxFiles(dbx);
+    var dbx = new Dropbox(dbConf);
+    var ss = new SendSpace(ssConf);
 
-        ss.getAllFolders().then(function(response) {
-            console.log(response);
-            /*
-            response.result.folder.forEach(function(item) {
+    ss.startSession().then(function(response) {
+	    console.log('=== LOGIN SUCCESS!');
+
+        ss.getAllFoldersAndFiles().then(function(response) {
+            //console.log(response);
+            response.forEach(function(item) {
                 console.log(item);
             });
-            */
 
-        }).catch(function(response) {
-            console.log(response);
+            // logout
+            ss.endSession().then(function(response) {
+                console.log("=== LOGOUT SUCCESS");
+            }).catch(function(response) {
+                console.log("=== LOGOUT FAIL");
+            })
+
+        }).catch(function(error) {
+            console.log(error);
         });
 
     }).catch(function(error){
-	console.log('=== FAIL!');
+	    console.log('=== FAIL!');
         console.log(error);
     });
 	
