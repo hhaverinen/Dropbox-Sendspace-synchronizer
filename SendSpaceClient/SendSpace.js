@@ -11,8 +11,8 @@ SendSpace = function (options) {
     this.apiKey = options.apiKey;
     this.sessionKey = options.sessionKey;
 
-    this.folders;
-    this.files;
+    this.folders = {};
+    this.files = {};
 }
 
 // private methods
@@ -106,7 +106,7 @@ SendSpace.prototype.endSession = function() {
 }
 
 // uploads file to the sendspace
-SendSpace.prototype.uploadFileToSendSpace = function(fileName, fileStream) {
+SendSpace.prototype.uploadFileToSendSpace = function(fileName, fileStream, folderId) {
     var self = this;
 
     return new Promise(function(resolve, reject) {
@@ -117,7 +117,8 @@ SendSpace.prototype.uploadFileToSendSpace = function(fileName, fileStream) {
                 MAX_FILE_SIZE: uploadObj.max_file_size,
                 UPLOAD_IDENTIFIER: uploadObj.upload_identifier,
                 extra_info: uploadObj.extra_info,
-                userfile: fileStream
+                userfile: fileStream,
+                folder_id: (folderId) ? folderId : 0
             };
 
             request.post({url:uploadObj.url, formData: formData}, function(error, response, body) {
@@ -174,7 +175,16 @@ SendSpace.prototype.getSendSpaceFolderContents = function(folderId) {
     return new Promise(function(resolve, reject) {
         var url = 'http://api.sendspace.com/rest/?method=folders.getcontents&session_key='+self.sessionKey+'&folder_id='+folderId;
         makeRequest(url).then(function(body) {
-            // TODO populate files json?
+            var files = body.result.file;
+            if (files) {
+                if (Array.isArray(files)) {
+                    files.forEach(function(item) {
+                        self.files[item.$.name] = {folderId: item.$.folder_id};
+                    });
+                } else {
+                    self.files[files.$.name] = {folderId: files.$.folder_id};
+                }
+            }
             resolve(body);
         }).catch(function(body) {
             reject(body);
@@ -203,25 +213,54 @@ SendSpace.prototype.getAllFoldersAndFiles = function() {
     });
 }
 
-var filesParentExists = function(name, parent) {
-    return files.name.id === parent;
-}
-
-var foldersParentExists = function(name, parent) {
-    return files.name.parentId === parent;
-}
-
 SendSpace.prototype.fileExists = function(filepath) {
-    //TODO: not tested
     var pathArray = filepath.substring(1).split("/");
+    //console.log(pathArray);
+    //console.log(this.files);
+    //console.log(this.folders);
     if (this.files && this.folders && pathArray.length > 0) {
         var parentId = 0; // initialize this with sendspace root folderId
         for(var i = 0; i < pathArray.length; i++) {
             if (i === pathArray.length - 1) {
-                return filesParentExists(pathArray[i], parentId);
+                var file = this.files[pathArray[i]];
+                if (!file) {
+                    return false;
+                }
+                return (file.folderId == parentId);
             } else {
-                if (foldersParentExists(pathArray[i], parentId)) {
-                    parentId = folders.pathArray[i].id;
+                var folder = this.folders[pathArray[i]];
+                if (!folder) {
+                    return false;
+                }
+                if (folder.parentId == parentId) {
+                    parentId = this.folders[pathArray[i]].id;
+                } else {
+                    return false;
+                }
+            }
+        }
+    }
+
+    return false;
+}
+
+SendSpace.prototype.folderExists = function(folderpath) {
+    var pathArray = filepath.substring(1).split("/");
+    if (this.folders && pathArray.length > 0) {
+        var parentId = 0; // initialize this with sendspace root folderId
+        for(var i = 0; i < pathArray.length; i++) {
+            var folder = this.folders[pathArray[i]];
+            if (i === pathArray.length - 1) {
+                if(!folder) {
+                    return false;
+                }
+                return (folder.parentId == parentId);
+            } else {
+                if(!folder) {
+                    return false;
+                }
+                if (folder.parentId == parentId) {
+                    parentId = folder.id;
                 } else {
                     return false;
                 }
