@@ -1,6 +1,5 @@
-var request = require('request');
-var xml2js = require('xml2js');
 var md5 = require('md5');
+var routes = require('./routes');
 
 var SendSpace;
 
@@ -15,132 +14,43 @@ SendSpace = function (options) {
     this.files = {};
 }
 
-// private methods
-// is this possible to do async? Probably not performance issue anyhow.
-var sendSpaceUploadResponseToJson = function(response) {
-    var responseObj = {};
-    var responseLines = response.split('\n');
-    responseLines.forEach(function(line) {
-        if(line) {
-            var splittedLine = line.split('=');
-            responseObj[splittedLine[0]] = splittedLine[1];
-        }
-    });
-    return responseObj;
-}
+SendSpace.prototype = Object.assign(SendSpace.prototype, routes);
 
-var xmlToJson = function(xml) {
-    return new Promise(function(resolve, reject) {
-        var parser = new xml2js.Parser({explicitArray: false});
-        parser.parseString(xml, function(error, result) {
-            if(error) {
-                reject(error);
-            }
-            resolve(result);
-        });
-    });
-}
-
-var checkSendSpaceResponse = function(body) {
-    return new Promise(function(resolve, reject) {
-        if (body.result.$.status === 'fail') {
-            reject(body);
-        }
-        resolve(body);
-    });
-}
-
-var makeRequest = function (url) {
-    return new Promise(function(resolve, reject) {
-        request(url, function(error, response, body) {
-            if(error) {
-                reject(error);
-            }
-            // TODO: is there more elegant way to write this?
-            xmlToJson(body).then(checkSendSpaceResponse).then(function(body) {
-                resolve(body);
-            }).catch(function(body) {
-                reject(body);
-            });
-        });
-    });
-}
-
-// gets sendspace sessionkey for current session
 SendSpace.prototype.startSession = function() {
     var self = this;
 
-    return new Promise(function(resolve, reject) {
-        var tokenUrl = 'http://api.sendspace.com/rest/?method=auth.createtoken&api_version=1.2&api_key='+self.apiKey;        
-        makeRequest(tokenUrl).then(function(body) {
-            var token = body.result.token;
-            var email = self.user;
-            var pw = self.password;
-            var tokenedpw = md5(token + md5(pw).toLowerCase()).toLowerCase();
-            var authUrl = 'http://api.sendspace.com/rest/?method=auth.login&token='+token+'&user_name='+email+'&tokened_password='+tokenedpw;
+    return self.authCreateToken(this.apiKey).then(function(body) {
+        var token = body.result.token;
+        var email = self.user;
+        var pw = self.password;
+        var tokenedpw = md5(token + md5(pw).toLowerCase()).toLowerCase();
 
-            makeRequest(authUrl).then(function(body) {
-                self.sessionKey = body.result.session_key;
-                resolve(self.sessionKey);
-            }).catch(function(body) {
-                reject(body);
-            });
-
-        }).catch(function(body) {
-            reject(body);
+        return self.authLogin(email, tokenedpw, token).then(function(body) {
+            self.sessionKey = body.result.session_key;
+            return self.sessionKey;
         });
     });
 }
 
 SendSpace.prototype.endSession = function() {
-    var self = this;
-
-    return new Promise(function (resolve, reject) {
-        var logoutUrl = 'http://api.sendspace.com/rest/?method=auth.logout&session_key='+self.sessionKey;
-        makeRequest(logoutUrl).then(function(body) {
-            resolve(body);
-        }).catch(function(body) {
-            reject(body);
-        });
-    });
+    return this.authLogout(this.sessionKey);
 }
 
-// uploads file to the sendspace
 SendSpace.prototype.uploadFileToSendSpace = function(fileName, fileStream, folderId) {
     var self = this;
 
-    return new Promise(function(resolve, reject) {
-        var uploadUrl = 'http://api.sendspace.com/rest/?method=upload.getinfo&session_key='+self.sessionKey;
-        makeRequest(uploadUrl).then(function(body) {
-            var uploadObj = body.result.upload.$;
-            var formData = {
-                MAX_FILE_SIZE: uploadObj.max_file_size,
-                UPLOAD_IDENTIFIER: uploadObj.upload_identifier,
-                extra_info: uploadObj.extra_info,
-                userfile: fileStream,
-                folder_id: (folderId) ? folderId : 0
-            };
+    return self.uploadGetInfo(self.sessionKey).then(function(body) {
+        var uploadObj = body.result.upload.$;
+        var formData = {
+            MAX_FILE_SIZE: uploadObj.max_file_size,
+            UPLOAD_IDENTIFIER: uploadObj.upload_identifier,
+            extra_info: uploadObj.extra_info,
+            userfile: fileStream,
+            folder_id: (folderId) ? folderId : 0
+        };
 
-            request.post({url:uploadObj.url, formData: formData}, function(error, response, body) {
-                if(error) {
-                    reject(error);
-                }
-
-                var respJson = sendSpaceUploadResponseToJson(body);
-                if(respJson.upload_status === 'ok') {
-                    // rename the file since downloadStream gives 'donwload' to file name
-                    var renameUrl = 'http://api.sendspace.com/rest/?method=files.setinfo&session_key='+self.sessionKey+'&file_id='+respJson.file_id+'&name='+fileName;
-                    makeRequest(renameUrl).then(function(body) {
-                        resolve(body);
-                    }).catch(function(body) {
-                        reject(body);
-                    });
-                } else {
-                    reject(respJson);
-                }
-            });
-        }).catch(function(body) {
-            reject(body);
+        return self.uploadFile(uploadObj.url, formData).then(function(resp) {
+            return self.filesSetInfo(self.sessionKey, resp.file_id, fileName);
         });
     });
 }
@@ -148,50 +58,41 @@ SendSpace.prototype.uploadFileToSendSpace = function(fileName, fileStream, folde
 SendSpace.prototype.getAllFolders = function() {
     var self = this;
 
-    return new Promise(function(resolve, reject) {
-        var url = 'http://api.sendspace.com/rest/?method=folders.getall&session_key='+self.sessionKey;
-        makeRequest(url).then(function(body) {
-            var folders = body.result.folder;
-            var jsonFolders = {};
-            if(Array.isArray(folders)) {
-                folders.forEach(function(item) {
-                    jsonFolders[item.$.name] = {id: item.$.id, parentId: item.$.parent_folder_id};
-                });
-            } else {
-                jsonFolders[folders.$.name] = {id: folders.$.id, parentId: folders.$.parent_folder_id};
-            }
+    return self.foldersGetAll(self.sessionKey).then(function(body) {
+        var folders = body.result.folder;
+        var jsonFolders = {};
+        if(Array.isArray(folders)) {
+            folders.forEach(function(item) {
+                jsonFolders[item.$.name] = {id: item.$.id, parentId: item.$.parent_folder_id};
+            });
+        } else {
+            jsonFolders[folders.$.name] = {id: folders.$.id, parentId: folders.$.parent_folder_id};
+        }
 
-            self.folders = jsonFolders;
-            resolve(jsonFolders);
-        }).catch(function(body) {
-            reject(body);
-        })
+        self.folders = jsonFolders;
+        return jsonFolders;
     });
 }
 
 SendSpace.prototype.getSendSpaceFolderContents = function(folderId) {    
     var self = this;
-    
-    return new Promise(function(resolve, reject) {
-        var url = 'http://api.sendspace.com/rest/?method=folders.getcontents&session_key='+self.sessionKey+'&folder_id='+folderId;
-        makeRequest(url).then(function(body) {
-            var files = body.result.file;
-            if (files) {
-                if (Array.isArray(files)) {
-                    files.forEach(function(item) {
-                        self.files[item.$.name] = {folderId: item.$.folder_id};
-                    });
-                } else {
-                    self.files[files.$.name] = {folderId: files.$.folder_id};
-                }
+
+    return self.foldersGetContents(self.sessionKey).then(function(body) {
+        var files = body.result.file;
+        if (files) {
+            if (Array.isArray(files)) {
+                files.forEach(function(item) {
+                    self.files[item.$.name] = {folderId: item.$.folder_id};
+                });
+            } else {
+                self.files[files.$.name] = {folderId: files.$.folder_id};
             }
-            resolve(body);
-        }).catch(function(body) {
-            reject(body);
-        });
+        }
+        return body;
     });
 }
 
+// TODO: these kinds of custom "extra" methods to some own modules?
 SendSpace.prototype.getAllFoldersAndFiles = function() {
     var self = this;
 
@@ -215,9 +116,6 @@ SendSpace.prototype.getAllFoldersAndFiles = function() {
 
 SendSpace.prototype.fileExists = function(filepath) {
     var pathArray = filepath.substring(1).split("/");
-    //console.log(pathArray);
-    //console.log(this.files);
-    //console.log(this.folders);
     if (this.files && this.folders && pathArray.length > 0) {
         var parentId = 0; // initialize this with sendspace root folderId
         for(var i = 0; i < pathArray.length; i++) {

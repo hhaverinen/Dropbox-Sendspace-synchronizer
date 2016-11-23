@@ -24,7 +24,8 @@ var getAllDropBoxFilesAndFolders = function(dbx, ss, cursor) {
                     if (!dbContentExists(item.path_display, item['.tag'], ss)) {
                         console.log("=== Started to sync file: " + item.path_display)
                         ss.uploadFileToSendSpace(item.name, request.get(getDropBoxDownloadParams(item.path_display, dbConf.accessToken))).then(function (response) {
-                            console.log(response.result.file.$);
+                            console.log(response);
+                            //console.log(response.result.file.$);
                         }).catch(function (response) {
                             console.log(response);
                         });
@@ -77,6 +78,13 @@ var getDropBoxDownloadParams = function(filepath, authToken) {
 module.exports = function() {
     var dbx = new Dropbox(dbConf);
     var ss = new SendSpace(ssConf);
+    /*
+    ss.startSession().then(function(response) {
+        console.log(response);
+    }).catch(function(error) {
+        console.log(error);
+    });*/
+
 
     ss.startSession().then(function(response) {
 	    console.log('=== LOGIN SUCCESS!');
@@ -86,13 +94,13 @@ module.exports = function() {
             //console.log(ss.fileExists("/kissa/kissanpoika/kilpikonna/testi.txt"));
             getAllDropBoxFilesAndFolders(dbx, ss);
             // logout
-            /*
+/*
             ss.endSession().then(function(response) {
                 console.log("=== LOGOUT SUCCESS");
             }).catch(function(response) {
                 console.log("=== LOGOUT FAIL");
             })
-            */
+*/
 
         }).catch(function(error) {
             console.log(error);
@@ -102,7 +110,7 @@ module.exports = function() {
 	    console.log('=== FAIL!');
         console.log(error);
     });
-	
+
     
     return "Terve mualima!";
 }
