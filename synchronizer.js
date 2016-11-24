@@ -1,6 +1,7 @@
 var Dropbox = require('dropbox');
 var SendSpace = require('./SendSpaceClient/SendSpace');
 var request = require('request');
+var extend = require('extend');
 
 var dbConf = require('./config/dropboxConfig');
 var ssConf = require('./config/sendspaceConfig');
@@ -15,54 +16,26 @@ var dbContentExists = function(path, tag, ss) {
 }
 
 // gets all the files from dropbox recursively
-var getAllDropBoxFilesAndFolders = function(dbx, ss, cursor) {
-    if (!cursor) {
-        dbx.filesListFolder({ path: '', recursive: true })
-            .then(function(response) {
-                response.entries.forEach(function(item) {
-                    //console.log(item);
-                    if (!dbContentExists(item.path_display, item['.tag'], ss)) {
-                        console.log("=== Started to sync file: " + item.path_display)
-                        ss.uploadFileToSendSpace(item.name, request.get(getDropBoxDownloadParams(item.path_display, dbConf.accessToken))).then(function (response) {
-                            console.log(response);
-                            //console.log(response.result.file.$);
-                        }).catch(function (response) {
-                            console.log(response);
-                        });
-                    }
+var getAllDropBoxFilesAndFolders = function(dbx, cursor, contents) {
+    return new Promise(function(resolve, reject) {
+        var contents = contents || [];
 
-                });
+        var responseHandler = function(response) {
+            contents = contents.concat(response.entries);
 
-                if (response.has_more) {
-                    getAllDropBoxFilesAndFolders(dbx, ss, response.cursor);
-                }
-            }).catch(function(error) {
-                console.log(error);
-            });
-    } else {
-        dbx.filesListFolderContinue({ cursor: cursor })
-            .then(function(response) {
-                response.entries.forEach(function(item) {
-                    //console.log(item);
+            if (response.has_more) {
+                return getAllDropBoxFilesAndFolders(dbx, response.cursor, contents)
+            } else {
+                resolve(contents);
+            }
+        }
 
-                     if (!dbContentExists(item.path_display, item['.tag'], ss)) {
-                        console.log("=== Started to sync file: " + item.path_display)
-                         ss.uploadFileToSendSpace(item.name, request.get(getDropBoxDownloadParams(item.path_display, dbConf.accessToken))).then(function (response) {
-                            console.log(response.result.file.$);
-                         }).catch(function (response) {
-                            console.log(response);
-                        });
-                    }
-
-                });
-
-                if (response.has_more) {
-                    getAllDropBoxFilesAndFolders(dbx, ss, response.cursor);
-                }
-            }).catch(function(error) {
-                console.log(error);
-            });
-    }
+        if(!cursor) {
+            dbx.filesListFolder({ path: '', recursive: true }).then(responseHandler);
+        } else {
+            dbx.filesListFolderContinue({ cursor: cursor }).then(responseHandler);
+        }
+    });
 }
 
 var getDropBoxDownloadParams = function(filepath, authToken) {
@@ -85,25 +58,50 @@ module.exports = function() {
         console.log(error);
     });*/
 
+    /*
+    response.entries.forEach(function(item) {
+        console.log(item);
+
+        if (!dbContentExists(item.path_display, item['.tag'], ss)) {
+            console.log("=== Started to sync file: " + item.path_display)
+            ss.uploadFileToSendSpace(item.name, request.get(getDropBoxDownloadParams(item.path_display, dbConf.accessToken))).then(function (response) {
+                console.log(response);
+                //console.log(response.result.file.$);
+            }).catch(function (response) {
+                console.log(response);
+            });
+        }
+    });
+    */
+
 
     ss.startSession().then(function(response) {
 	    console.log('=== LOGIN SUCCESS!');
 
         ss.getAllFoldersAndFiles().then(function(response) {
+            //console.log(response);
 
             //console.log(ss.fileExists("/kissa/kissanpoika/kilpikonna/testi.txt"));
-            getAllDropBoxFilesAndFolders(dbx, ss);
-            // logout
-/*
-            ss.endSession().then(function(response) {
-                console.log("=== LOGOUT SUCCESS");
-            }).catch(function(response) {
-                console.log("=== LOGOUT FAIL");
-            })
-*/
+            getAllDropBoxFilesAndFolders(dbx).then(function(entries) {
+                var folders = [], files = [];
 
-        }).catch(function(error) {
-            console.log(error);
+                entries.forEach(function(item) {
+                    if (item['.tag'] == 'folder') {
+                        folders.push(item);
+                    } else {
+                        files.push(item);
+                    }
+                });
+
+                //TODO: sync folders
+
+                //TODO: sync files
+
+                //logout
+                ss.endSession().then(function(response) {
+                    console.log("=== LOGOUT SUCCESS");
+                });
+            });
         });
 
     }).catch(function(error){

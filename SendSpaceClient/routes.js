@@ -43,4 +43,8 @@ routes.foldersGetContents = function(sessionKey, folderId) {
     return ssrequest(baseUrl + '?method=folders.getcontents&session_key='+sessionKey+'&folder_id='+folderId);
 }
 
+routes.foldersCreate = function(sessionKey, folderName, parentFolderId) {
+    return ssrequest(baseUrl + '?method=folders.create&session_key='+sessionKey+'&name='+folderName+'&parent_folder_id='+parentFolderId);
+}
+
 module.exports = routes;

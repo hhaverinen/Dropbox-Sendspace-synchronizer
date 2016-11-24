@@ -77,7 +77,7 @@ SendSpace.prototype.getAllFolders = function() {
 SendSpace.prototype.getSendSpaceFolderContents = function(folderId) {    
     var self = this;
 
-    return self.foldersGetContents(self.sessionKey).then(function(body) {
+    return self.foldersGetContents(self.sessionKey, folderId).then(function(body) {
         var files = body.result.file;
         if (files) {
             if (Array.isArray(files)) {
