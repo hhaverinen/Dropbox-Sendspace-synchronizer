@@ -6,15 +6,6 @@ var extend = require('extend');
 var dbConf = require('./config/dropboxConfig');
 var ssConf = require('./config/sendspaceConfig');
 
-var dbContentExists = function(path, tag, ss) {
-    if (tag == 'file') {
-        return ss.fileExists(path);
-    } else if (tag == '.folder') {
-        return ss.folderExists(path)
-    }
-    return false;
-}
-
 // gets all the files from dropbox recursively
 var getAllDropBoxFilesAndFolders = function(dbx, cursor, contents) {
     return new Promise(function(resolve, reject) {
@@ -27,6 +18,8 @@ var getAllDropBoxFilesAndFolders = function(dbx, cursor, contents) {
             if (response.has_more) {
                 getAllDropBoxFilesAndFolders(dbx, response.cursor, contents).then(function(contents) {
                     resolve(contents);
+                }).catch(function(error) {
+                    reject(error);
                 });
             } else {
                 resolve(contents);
@@ -35,10 +28,14 @@ var getAllDropBoxFilesAndFolders = function(dbx, cursor, contents) {
 
         if(!cursor) {
             console.log("call files list folder");
-            dbx.filesListFolder({ path: '', recursive: true }).then(responseHandler);
+            dbx.filesListFolder({ path: '', recursive: true }).then(responseHandler).catch(function(error) {
+                reject(error);
+            });
         } else {
             console.log("call files list folder continue");
-            dbx.filesListFolderContinue({ cursor: cursor }).then(responseHandler);
+            dbx.filesListFolderContinue({ cursor: cursor }).then(responseHandler).catch(function(error) {
+                reject(error);
+            });
         }
     });
 }
@@ -56,38 +53,15 @@ var getDropBoxDownloadParams = function(filepath, authToken) {
 module.exports = function() {
     var dbx = new Dropbox(dbConf);
     var ss = new SendSpace(ssConf);
-    /*
-    ss.startSession().then(function(response) {
-        console.log(response);
-    }).catch(function(error) {
-        console.log(error);
-    });*/
-
-    /*
-    response.entries.forEach(function(item) {
-        console.log(item);
-
-        if (!dbContentExists(item.path_display, item['.tag'], ss)) {
-            console.log("=== Started to sync file: " + item.path_display)
-            ss.uploadFileToSendSpace(item.name, request.get(getDropBoxDownloadParams(item.path_display, dbConf.accessToken))).then(function (response) {
-                console.log(response);
-                //console.log(response.result.file.$);
-            }).catch(function (response) {
-                console.log(response);
-            });
-        }
-    });
-    */
-
 
     ss.startSession().then(function(response) {
-	    console.log('=== LOGIN SUCCESS!');
+	    console.log('=== Login to sendspace successful!');
 
         return ss.getAllFoldersAndFiles().then(function(response) {
-            //console.log(response);
+            console.log('=== Got all existing files and folders from sendspace!');
 
-            //console.log(ss.fileExists("/kissa/kissanpoika/kilpikonna/testi.txt"));
             return getAllDropBoxFilesAndFolders(dbx).then(function(entries) {
+                console.log('=== Got all files and folders from dropbox');
                 var folders = [], files = [];
 
                 entries.forEach(function(item) {
@@ -98,40 +72,39 @@ module.exports = function() {
                     }
                 });
 
-                console.log(folders);
-                //console.log(files);
-
-                //TODO: sync folders
-                //folders = ['/testi1/testi2'];
+                //sync folders
                 return ss.syncFolders(folders).then(function(response) {
-                    console.log(response);
-                    console.log('=== SYNCED ALL FOLDERS!');
+                    console.log('=== Synced all folders from dropbox to sendspace!');
+
+                    //sync files
+                    return Promise.all(files.map(function(item) {
+                        if(!ss.fileExists(item.path_display)){
+                            console.log("=== Started syncing file from dropbox to sendspace: " + JSON.stringify(item));
+                            var name = item.name;
+                            var path = item.path_display;
+                            var folder = ss.getParentFolder(path);
+                            var dropboxDownloadParams = getDropBoxDownloadParams(path, dbConf.accessToken);
+                            return ss.uploadFileToSendSpace(name, request.get(dropboxDownloadParams), folder);
+                        }
+                    })).then(function(response) {
+                        console.log('=== Synced all files from dropbox to sendspace!');
+                    });
+
                 });
-
-                //TODO: sync files
-
-
-                /*
-                //logout
-                ss.endSession().then(function(response) {
-                    console.log('=== LOGOUT SUCCESS');
-                });
-                */
             });
         });
 
     }).catch(function(error){
-	    console.log('=== FAIL!');
+	    console.log('=== Error happened!');
         console.log(error);
     }).then(function() {
-        return ss.endSession().then(function() {
-            console.log('=== LOGOUT SUCCESS');
+        ss.endSession().then(function() {
+            console.log('=== Successfully logout from sendspace!');
+        }).catch(function(error) {
+            console.log('=== Failed to logout from sendspace!');
+            console.log(error);
         });
-    }).catch(function(error) {
-        console.log('=== LOGOUT FAIL');
-        console.log(error);
     });
 
-    
     return "Terve mualima!";
 }
