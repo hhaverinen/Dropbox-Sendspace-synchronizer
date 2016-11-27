@@ -22,17 +22,22 @@ var getAllDropBoxFilesAndFolders = function(dbx, cursor, contents) {
 
         var responseHandler = function(response) {
             contents = contents.concat(response.entries);
+            console.log(response.has_more);
 
             if (response.has_more) {
-                return getAllDropBoxFilesAndFolders(dbx, response.cursor, contents)
+                getAllDropBoxFilesAndFolders(dbx, response.cursor, contents).then(function(contents) {
+                    resolve(contents);
+                });
             } else {
                 resolve(contents);
             }
         }
 
         if(!cursor) {
+            console.log("call files list folder");
             dbx.filesListFolder({ path: '', recursive: true }).then(responseHandler);
         } else {
+            console.log("call files list folder continue");
             dbx.filesListFolderContinue({ cursor: cursor }).then(responseHandler);
         }
     });
@@ -78,34 +83,52 @@ module.exports = function() {
     ss.startSession().then(function(response) {
 	    console.log('=== LOGIN SUCCESS!');
 
-        ss.getAllFoldersAndFiles().then(function(response) {
+        return ss.getAllFoldersAndFiles().then(function(response) {
             //console.log(response);
 
             //console.log(ss.fileExists("/kissa/kissanpoika/kilpikonna/testi.txt"));
-            getAllDropBoxFilesAndFolders(dbx).then(function(entries) {
+            return getAllDropBoxFilesAndFolders(dbx).then(function(entries) {
                 var folders = [], files = [];
 
                 entries.forEach(function(item) {
                     if (item['.tag'] == 'folder') {
-                        folders.push(item);
+                        folders.push(item.path_display); // only paths are needed
                     } else {
                         files.push(item);
                     }
                 });
 
+                console.log(folders);
+                //console.log(files);
+
                 //TODO: sync folders
+                //folders = ['/testi1/testi2'];
+                return ss.syncFolders(folders).then(function(response) {
+                    console.log(response);
+                    console.log('=== SYNCED ALL FOLDERS!');
+                });
 
                 //TODO: sync files
 
+
+                /*
                 //logout
                 ss.endSession().then(function(response) {
-                    console.log("=== LOGOUT SUCCESS");
+                    console.log('=== LOGOUT SUCCESS');
                 });
+                */
             });
         });
 
     }).catch(function(error){
 	    console.log('=== FAIL!');
+        console.log(error);
+    }).then(function() {
+        return ss.endSession().then(function() {
+            console.log('=== LOGOUT SUCCESS');
+        });
+    }).catch(function(error) {
+        console.log('=== LOGOUT FAIL');
         console.log(error);
     });
 

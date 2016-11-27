@@ -46,13 +46,17 @@ SendSpace.prototype.uploadFileToSendSpace = function(fileName, fileStream, folde
             UPLOAD_IDENTIFIER: uploadObj.upload_identifier,
             extra_info: uploadObj.extra_info,
             userfile: fileStream,
-            folder_id: (folderId) ? folderId : 0
+            folder_id: folderId || 0
         };
 
         return self.uploadFile(uploadObj.url, formData).then(function(resp) {
             return self.filesSetInfo(self.sessionKey, resp.file_id, fileName);
         });
     });
+}
+
+SendSpace.prototype.createFolder = function(folderName, parentFolderId) {
+    return this.foldersCreate(this.sessionKey, folderName, parentFolderId);
 }
 
 SendSpace.prototype.getAllFolders = function() {
@@ -115,7 +119,7 @@ SendSpace.prototype.getAllFoldersAndFiles = function() {
 }
 
 SendSpace.prototype.fileExists = function(filepath) {
-    var pathArray = filepath.substring(1).split("/");
+    var pathArray = filepath.substring(1).split('/');
     if (this.files && this.folders && pathArray.length > 0) {
         var parentId = 0; // initialize this with sendspace root folderId
         for(var i = 0; i < pathArray.length; i++) {
@@ -142,8 +146,8 @@ SendSpace.prototype.fileExists = function(filepath) {
     return false;
 }
 
-SendSpace.prototype.folderExists = function(folderpath) {
-    var pathArray = filepath.substring(1).split("/");
+SendSpace.prototype.folderExists = function(folderPath) {
+    var pathArray = folderPath.substring(1).split('/');
     if (this.folders && pathArray.length > 0) {
         var parentId = 0; // initialize this with sendspace root folderId
         for(var i = 0; i < pathArray.length; i++) {
@@ -168,4 +172,68 @@ SendSpace.prototype.folderExists = function(folderpath) {
 
     return false;
 }
+
+SendSpace.prototype.checkAndCreateFolder = function(folderName, parentId) {
+    var self = this;
+    return new Promise(function(resolve, reject) {
+        var folder = self.folders[folderName];
+        if (folder && folder.parentId == parentId) {
+            resolve(folder.id);
+        } else {
+            self.createFolder(folderName, parentId).then(function(body) {
+                var createdFolder = body.result.folder.$;
+                self.folders[createdFolder.name] = {id: createdFolder.id, parentId: createdFolder.parent_folder_id};
+                resolve(createdFolder.id);
+            }).catch(function(body) {
+                reject(body);
+            });
+        }
+    });
+}
+
+SendSpace.prototype.syncFolderPathArray = function(folderPathArray, parentFolderId) {
+    var self = this;
+    return new Promise(function(resolve) {
+        var parentId = parentFolderId || 0;
+        var folder = folderPathArray.shift();
+
+        var responseHandler = function(response) {
+            if (folderPathArray.length > 0) {
+                self.syncFolderPathArray(folderPathArray, response).then(function() {
+                    resolve();
+                });
+            } else {
+                resolve(); // success for creating all the folders
+            }
+        }
+
+        self.checkAndCreateFolder(folder, parentId).then(responseHandler);
+
+    });
+}
+
+SendSpace.prototype.syncFolderPath = function(folderPath) {
+    var pathArray = folderPath.substring(1).split('/');
+    return this.syncFolderPathArray(pathArray);
+}
+
+SendSpace.prototype.syncFolders = function(folderPaths) {
+    var self = this;
+    return new Promise(function(resolve) {
+        var folderPath = folderPaths.shift();
+
+        var responseHandler = function() {
+            if (folderPaths.length > 0) {
+                self.syncFolders(folderPaths).then(function() {
+                    resolve();
+                });
+            } else {
+                resolve(); // all folders synced
+            }
+        }
+
+        self.syncFolderPath(folderPath).then(responseHandler);
+    });
+}
+
 module.exports = SendSpace;
