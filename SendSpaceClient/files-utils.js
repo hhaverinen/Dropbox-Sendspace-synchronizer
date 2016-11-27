@@ -1,5 +1,11 @@
 var filesUtils = {};
 
+/**
+ * Check whether file exists already in sendspace. This method uses saved JSON of files and folders and does not
+ * make any requests straight to the sendspace API
+ * @param filepath whole filepath of the file
+ * @return {boolean} true if file already exists, false otherwise.
+ */
 filesUtils.fileExists = function(filepath) {
     var pathArray = filepath.substring(1).split('/');
     if (this.files && this.folders && pathArray.length > 0) {
@@ -28,6 +34,12 @@ filesUtils.fileExists = function(filepath) {
     return false;
 }
 
+/**
+ * Returns folder id of the file, whether the file exists in sendspace or not. This method uses saved JSON of files
+ * and folders and does not make any requests straight to the sendspace API
+ * @param filePath whole filepath of the file
+ * @return {*} return ID of the folder. If folder is not found, method return id of the root folder (= 0)
+ */
 filesUtils.getParentFolder = function(filePath) {
     var pathArray = filePath.substring(1).split('/');
 

@@ -1,7 +1,6 @@
 var Dropbox = require('dropbox');
 var SendSpace = require('./SendSpaceClient/SendSpace');
 var request = require('request');
-var extend = require('extend');
 
 var dbConf = require('./config/dropboxConfig');
 var ssConf = require('./config/sendspaceConfig');

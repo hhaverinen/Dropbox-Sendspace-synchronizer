@@ -1,5 +1,11 @@
 var foldersUtils = {};
 
+/**
+ * Checks if given folder exists in sendspace already. This method uses saved JSON of folders and does not
+ * make any requests straight to the sendspace API
+ * @param folderPath whole path to the folder
+ * @return {boolean} true if folder exists, false otherwise
+ */
 foldersUtils.folderExists = function(folderPath) {
     var pathArray = folderPath.substring(1).split('/');
     if (this.folders && pathArray.length > 0) {
@@ -27,6 +33,12 @@ foldersUtils.folderExists = function(folderPath) {
     return false;
 }
 
+/**
+ * Checks whether given folder already exists in sendspace, and if not, creates it
+ * @param folderName name of the folder
+ * @param parentId id of the given folder's parent
+ * @return {Promise<*>} promise to the id of the folder's parent
+ */
 foldersUtils.checkAndCreateFolder = function(folderName, parentId) {
     var self = this;
     return new Promise(function(resolve, reject) {
@@ -45,6 +57,12 @@ foldersUtils.checkAndCreateFolder = function(folderName, parentId) {
     });
 }
 
+/**
+ * Synchronizes given folderpath starting from specific folder
+ * @param folderPathArray array containing pieces of the path
+ * @param parentFolderId sendspace folderId where to 'start' synchronizing
+ * @return {Promise} promise for the success of synchronizing the given folderpath
+ */
 foldersUtils.syncFolderPathArray = function(folderPathArray, parentFolderId) {
     var self = this;
     return new Promise(function(resolve, reject) {
@@ -70,11 +88,21 @@ foldersUtils.syncFolderPathArray = function(folderPathArray, parentFolderId) {
     });
 }
 
+/**
+ * Method for synchronizing folderpath with sendspace
+ * @param folderPath whole path of the folder
+ * @return {Promise} promise for the success of synchronizing the given folderpath
+ */
 foldersUtils.syncFolderPath = function(folderPath) {
     var pathArray = folderPath.substring(1).split('/');
     return this.syncFolderPathArray(pathArray);
 }
 
+/**
+ * Synchronizes given folders to sendspace
+ * @param folderPaths array containing whole paths for the folders
+ * @return {Promise} promise for the success of synchronizing the folders
+ */
 foldersUtils.syncFolders = function(folderPaths) {
     var self = this;
     return new Promise(function(resolve, reject) {

@@ -5,21 +5,38 @@ var folderUtils = require('./folders-utils');
 
 var SendSpace;
 
+/**
+ * Constructor for new SendSpace client
+ * @param options
+ * @param {String} [options.user] email of the user to sendspace
+ * @param {String} [options.password] password of the user
+ * @param {String] [options.apiKey] API key to the sendspace application
+ * @constructor
+ */
 SendSpace = function (options) {
     options = options || {};
     this.user = options.user;
     this.password = options.password;
     this.apiKey = options.apiKey;
-    this.sessionKey = options.sessionKey;
 
+    // this is populated in startSession method
+    this.sessionKey;
+
+    // these are populated in getAllFolders and getSendSpaceFolderContents methods.
+    // calling getAllFoldersAndFiles method will populate both
     this.folders = {};
     this.files = {};
 }
 
+// assign methods from modules to object
 SendSpace.prototype = Object.assign(SendSpace.prototype, routes);
 SendSpace.prototype = Object.assign(SendSpace.prototype, fileUtils);
 SendSpace.prototype = Object.assign(SendSpace.prototype, folderUtils);
 
+/**
+ * Starts sendspace session
+ * @return {Promise<String>} promise to the sessionkey
+ */
 SendSpace.prototype.startSession = function() {
     var self = this;
 
@@ -36,10 +53,21 @@ SendSpace.prototype.startSession = function() {
     });
 }
 
+/**
+ * Ends sendspace session
+ * @return {Promise<Object>} promise to the sendspace API response
+ */
 SendSpace.prototype.endSession = function() {
     return this.authLogout(this.sessionKey);
 }
 
+/**
+ * Uploads file to the sendspace
+ * @param fileName name of the file
+ * @param fileStream filestream of the file to be uploaded
+ * @param folderId sendspace folderId where file should be uploaded
+ * @return {Promise<Object>} promise to the file info of the uploaded file
+ */
 SendSpace.prototype.uploadFileToSendSpace = function(fileName, fileStream, folderId) {
     var self = this;
 
@@ -59,10 +87,21 @@ SendSpace.prototype.uploadFileToSendSpace = function(fileName, fileStream, folde
     });
 }
 
+/**
+ * Creates folder to the sendspace
+ * @param folderName name of the folder
+ * @param parentFolderId folderId where folder should be created
+ * @return {Promise<Object>} promise to the sendspace API response
+ */
 SendSpace.prototype.createFolder = function(folderName, parentFolderId) {
     return this.foldersCreate(this.sessionKey, folderName, parentFolderId);
 }
 
+/**
+ * Gets all folders from the sendspace. Also populates this.folders.
+ * @return {Promise<Object>} Object containing folder names as keys, and objects containing folder id and
+ * parent folder id as values
+ */
 SendSpace.prototype.getAllFolders = function() {
     var self = this;
 
@@ -82,6 +121,11 @@ SendSpace.prototype.getAllFolders = function() {
     });
 }
 
+/**
+ * Gets contents of the given sendspace folder. Also adds info of the found files to this.files.
+ * @param folderId id of the folder
+ * @return {Promise<Object>} promise to the array of contents of the folder
+ */
 SendSpace.prototype.getSendSpaceFolderContents = function(folderId) {    
     var self = this;
 
@@ -100,6 +144,10 @@ SendSpace.prototype.getSendSpaceFolderContents = function(folderId) {
     });
 }
 
+/**
+ * Gets all folders and files from the sendspace. Also invokes methods that populate this.folders and this.files objects.
+ * @return {Promise<Array.<Promise>>} promise to the array of promises containing info of files in sendspace
+ */
 SendSpace.prototype.getAllFoldersAndFiles = function() {
     var self = this;
 
