@@ -15,7 +15,6 @@ utils.getAllDropBoxFilesAndFolders = function(dbx, cursor, contents) {
 
         var responseHandler = function(response) {
             contents = contents.concat(response.entries);
-            console.log(response.has_more);
 
             if (response.has_more) {
                 this.getAllDropBoxFilesAndFolders(dbx, response.cursor, contents).then(function(contents) {

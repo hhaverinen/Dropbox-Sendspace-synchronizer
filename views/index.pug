@@ -1,0 +1,20 @@
+html
+    head
+        title Synchronizer
+        script(src='/jquery.min.js' type='text/javascript')
+        script(src='/Dropbox-sdk.min.js' type='text/javascript')
+        script(src='/views-index.js' type='text/javascript')
+    body
+        h1 Welcome to use a service that backups your files from dropbox to sendspace!
+        form(action='/dbauth')
+            p: button(type='submit') Authenticate with dropbox!
+            if dbauth
+                p Dropbox authentication successful!
+        form(id='sendspace_form')
+            p Sendspace email
+                input(type='textfield' name='user')
+            p Sendspace password
+                input(type='password' name='password')
+            p
+                input(type='hidden' name='dbaccesstoken' value=dbaccesstoken)
+        button(id='sync-start') Start synchronizing!
