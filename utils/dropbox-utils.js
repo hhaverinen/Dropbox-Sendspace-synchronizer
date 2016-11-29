@@ -10,6 +10,8 @@ var utils = {};
  * @return {Promise<Array.<Object>] Promise to the array containing all files and folders from the dropbox
  */
 utils.getAllDropBoxFilesAndFolders = function(dbx, cursor, contents) {
+    var self = this;
+
     return new Promise(function(resolve, reject) {
         var contents = contents || [];
 
@@ -17,7 +19,7 @@ utils.getAllDropBoxFilesAndFolders = function(dbx, cursor, contents) {
             contents = contents.concat(response.entries);
 
             if (response.has_more) {
-                this.getAllDropBoxFilesAndFolders(dbx, response.cursor, contents).then(function(contents) {
+                self.getAllDropBoxFilesAndFolders(dbx, response.cursor, contents).then(function(contents) {
                     resolve(contents);
                 }).catch(function(error) {
                     reject(error);

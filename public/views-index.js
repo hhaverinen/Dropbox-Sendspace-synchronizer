@@ -10,7 +10,15 @@ $(function() {
            data: $form.serialize(),
            success: function(result) {
                console.log(result);
+               $('#response').text(result);
            }
        });
-   })
+   });
+
+}).ajaxStart(function() {
+    $('#ajax-loader').show();
+    $('#blanket').show();
+}).ajaxStop(function() {
+    $('#ajax-loader').hide();
+    $('#blanket').hide();
 });

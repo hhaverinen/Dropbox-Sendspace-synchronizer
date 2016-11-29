@@ -5,6 +5,13 @@ var dropboxUtils = require('./utils/dropbox-utils');
 var dbConf = require('./config/dropboxConfig');
 var ssConf = require('./config/sendspaceConfig');
 
+/**
+ * synchronizes files and folders from dropbox to sendspace
+ * @param dropboxAccessToken dropbox accesstoken
+ * @param sendspaceUser sendspace user (email)
+ * @param sendspacePassword sendspace user password
+ * @return {Promise<String|Object>] return promise to the response message whether the synchronization was successful or not
+ */
 module.exports = function(dropboxAccessToken, sendspaceUser, sendspacePassword) {
 
     return new Promise(function(resolve, reject) {
@@ -54,7 +61,6 @@ module.exports = function(dropboxAccessToken, sendspaceUser, sendspacePassword) 
                         })).then(function() {
                             console.log('=== Synced all files from dropbox to sendspace!');
                         });
-
                     });
                 });
             });

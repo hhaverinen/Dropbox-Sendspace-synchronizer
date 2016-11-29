@@ -18,20 +18,24 @@ app.use(bodyParser.urlencoded({
     extended: true
 }));
 
-// routes
-app.get('/', function(req, res) {
-    res.render('index');
-});
+// middleware functions
+/**
+ * render home page
+ * @param req request
+ * @param res response
+ */
+var renderHome = function(req, res) {
+    var params = req.renderParams || {}
+    res.render('index', params);
+}
 
-// gets oauth url for dropbox and redirect user to there
-app.get('/dbauth', function(req, res) {
-    var baseUrl = 'https://www.dropbox.com/oauth2/authorize';
-    baseUrl += '?response_type=code&client_id='+dbconf.key+'&redirect_uri=http://localhost:3000'
-    res.redirect(baseUrl);
-});
-
-// gets access token from dropbox
-app.get('/gettoken', function(req, res) {
+/**
+ * middleware function for requesting access token from dropbox
+ * @param req request
+ * @param res response
+ * @param next next middleware function
+ */
+var getDropboxToken = function(req, res, next) {
     var code = req.query.code;
     if (code) {
         var data = {
@@ -39,47 +43,74 @@ app.get('/gettoken', function(req, res) {
             grant_type: 'authorization_code',
             client_id: dbconf.key,
             client_secret: dbconf.secret,
-            redirect_uri: 'http://localhost:3000'
+            redirect_uri: dbconf.redirectUrl
         }
         request.post({url: 'https://api.dropboxapi.com/oauth2/token', formData: data}, function (error, response, body) {
             if (error) {
-                res.send(error);
-                return;
+                req.renderParams = {error: error}
+                next();
             }
 
             // parse access token
             var accessToken = JSON.parse(body).access_token
             // if access token not found, return error
             if(!accessToken) {
-                res.send(body);
-                return;
+                req.renderParams = {error: body};
+                next();
             }
 
             // render index page with information of successful authentication
-            res.render('index', {dbaccesstoken: accessToken, dbauth: true});
+            req.renderParams = {dbaccesstoken: accessToken, dbauth: true}
+            next();
         });
     } else {
-        res.send('error happened!');
+        req.renderParams = {error: 'Error happened during dropbox authorization!'};
+        next();
     }
+}
+
+// routes
+/**
+ * home page
+ */
+app.get('/', renderHome);
+
+/**
+ * gets oauth url for dropbox and redirect user to there
+ */
+app.get('/dbauth', function(req, res) {
+    var baseUrl = 'https://www.dropbox.com/oauth2/authorize';
+    baseUrl += '?response_type=code&client_id='+dbconf.key+'&redirect_uri='+dbconf.redirectUrl
+    res.redirect(baseUrl);
 });
 
-// starts the synchronize progress and returns ok/fail response
+/**
+ * gets access token from dropbox and return user to home page
+ */
+app.get('/dbtoken', getDropboxToken, renderHome);
+
+/**
+ * starts the synchronize progress and returns ok/fail response
+ */
 app.post('/synchronize', function(req, res) {
     var user = req.body.user;
     var password = req.body.password;
     var dbaccesstoken = req.body.dbaccesstoken;
 
     // synchronize files and return response
-    synchronizer(dbaccesstoken, user, password).then(function(response) {
+    synchronizer(dbaccesstoken, user, password).then(function() {
         console.log('All good!')
-        res.send('All good!');
+        res.send('All files synced successfully!');
     }).catch(function(error) {
+        // TODO: parse error message?
         console.log(error);
-        res.send(error);
+        res.send(JSON.stringify(error));
     });
 });
 
-// starts the server
+/**
+ * starts the server
+ */
 app.listen(3000, function() {
     console.log("Server running in port 3000!");
 });
