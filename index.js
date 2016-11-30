@@ -5,6 +5,9 @@ var request = require('request');
 var dbconf = require('./config/dropboxConfig');
 var bodyParser = require('body-parser');
 
+// set the port
+var port = process.env.port || 8080;
+
 // set template engine
 app.set('views', './views');
 app.set('view engine', 'pug');
@@ -111,6 +114,6 @@ app.post('/synchronize', function(req, res) {
 /**
  * starts the server
  */
-app.listen(3000, function() {
-    console.log("Server running in port 3000!");
+app.listen(port, function() {
+    console.log('Server running in port '+port+'!');
 });
