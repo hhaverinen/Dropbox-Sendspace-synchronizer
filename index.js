@@ -6,7 +6,7 @@ var dbconf = require('./config/dropboxConfig');
 var bodyParser = require('body-parser');
 
 // set the port
-var port = process.env.port || 8080;
+var port = process.env.PORT || 8080;
 
 // set template engine
 app.set('views', './views');
