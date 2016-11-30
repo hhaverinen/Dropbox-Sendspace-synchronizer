@@ -22,10 +22,9 @@ SendSpace = function (options) {
     // this is populated in startSession method
     this.sessionKey;
 
-    // these are populated in getAllFolders and getSendSpaceFolderContents methods.
+    // this is populated in getAllFolders and getSendSpaceFolderContents methods.
     // calling getAllFoldersAndFiles method will populate both
     this.folders = {};
-    this.files = {};
 }
 
 // assign methods from modules to object
@@ -110,10 +109,10 @@ SendSpace.prototype.getAllFolders = function() {
         var jsonFolders = {};
         if(Array.isArray(folders)) {
             folders.forEach(function(item) {
-                jsonFolders[item.$.name] = {id: item.$.id, parentId: item.$.parent_folder_id};
+                jsonFolders[item.$.name] = {id: item.$.id, parentId: item.$.parent_folder_id, files: {}};
             });
         } else {
-            jsonFolders[folders.$.name] = {id: folders.$.id, parentId: folders.$.parent_folder_id};
+            jsonFolders[folders.$.name] = {id: folders.$.id, parentId: folders.$.parent_folder_id, files: {}};
         }
 
         self.folders = jsonFolders;
@@ -132,12 +131,20 @@ SendSpace.prototype.getSendSpaceFolderContents = function(folderId) {
     return self.foldersGetContents(self.sessionKey, folderId).then(function(body) {
         var files = body.result.file;
         if (files) {
+            var filesJson = {};
             if (Array.isArray(files)) {
                 files.forEach(function(item) {
-                    self.files[item.$.name] = {folderId: item.$.folder_id};
+                    filesJson[item.$.name] = {folderId: item.$.folder_id};
                 });
             } else {
-                self.files[files.$.name] = {folderId: files.$.folder_id};
+                filesJson[files.$.name] = {folderId: files.$.folder_id};
+            }
+            for (var key in self.folders) {
+                var folder = self.folders[key];
+                if (folder && folder.id == folderId) {
+                    folder.files = filesJson;
+                    break;
+                }
             }
         }
         return body;

@@ -48,7 +48,7 @@ foldersUtils.checkAndCreateFolder = function(folderName, parentId) {
         } else {
             self.createFolder(folderName, parentId).then(function(body) {
                 var createdFolder = body.result.folder.$;
-                self.folders[createdFolder.name] = {id: createdFolder.id, parentId: createdFolder.parent_folder_id};
+                self.folders[createdFolder.name] = {id: createdFolder.id, parentId: createdFolder.parent_folder_id, files: {}};
                 resolve(createdFolder.id);
             }).catch(function(body) {
                 reject(body);

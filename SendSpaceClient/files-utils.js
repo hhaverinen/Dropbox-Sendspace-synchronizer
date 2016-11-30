@@ -8,17 +8,33 @@ var filesUtils = {};
  */
 filesUtils.fileExists = function(filepath) {
     var pathArray = filepath.substring(1).split('/');
-    if (this.files && this.folders && pathArray.length > 0) {
+    if (this.folders && pathArray.length > 0) {
         var parentId = 0; // initialize this with sendspace root folderId
+
+        // a little bit different handling if file is in root directory
+        if (pathArray.length == 1) {
+            var folder = this.folders['Default']; // sendspace root directory is named 'Default'
+            var file = folder.files[pathArray[0]];
+            if (!file) {
+                return false;
+            }
+            return true;
+        }
+
+        // file not in root directory, iterate trough path and find if file exists
         for(var i = 0; i < pathArray.length; i++) {
-            if (i === pathArray.length - 1) {
-                var file = this.files[pathArray[i]];
+            var folder = this.folders[pathArray[i]];
+            if (i == pathArray.length - 2) {
+                if (!folder) {
+                    return false;
+                }
+
+                var file = folder.files[pathArray[i+1]];
                 if (!file) {
                     return false;
                 }
-                return (file.folderId == parentId);
+                return true;
             } else {
-                var folder = this.folders[pathArray[i]];
                 if (!folder) {
                     return false;
                 }
@@ -43,7 +59,7 @@ filesUtils.fileExists = function(filepath) {
 filesUtils.getParentFolder = function(filePath) {
     var pathArray = filePath.substring(1).split('/');
 
-    if (this.folders && pathArray.length > 0) {
+    if (this.folders && pathArray.length > 1) {
         var parentId = 0;
         for(var i = 0; i < pathArray.length - 1; i++) {
             var folder = this.folders[pathArray[i]];

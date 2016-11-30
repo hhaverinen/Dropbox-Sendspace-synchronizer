@@ -30,12 +30,10 @@ utils.getAllDropBoxFilesAndFolders = function(dbx, cursor, contents) {
         }
 
         if(!cursor) {
-            console.log("call files list folder");
             dbx.filesListFolder({ path: '', recursive: true }).then(responseHandler).catch(function(error) {
                 reject(error);
             });
         } else {
-            console.log("call files list folder continue");
             dbx.filesListFolderContinue({ cursor: cursor }).then(responseHandler).catch(function(error) {
                 reject(error);
             });
