@@ -23,8 +23,31 @@
     display: none;
 }
 
+body {
+    font-family: Arial, Helvetica, sans-serif;
+}
+
 .inline {
     display: inline-block;
     margin-right: 20px;
     vertical-align: top;
+    padding: 10px;
+}
+
+#sendspace-form {
+    margin-top: 30px;
+}
+
+#sendspace-form > div {
+    width: 400px;
+    margin-top: 10px;
+}
+
+#sendspace-form > div > span {
+    display: inline-block;
+}
+
+#sendspace-form > div > input {
+    float: right;
+    width: 50%;
 }

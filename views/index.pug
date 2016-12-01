@@ -10,16 +10,18 @@ html
         div(id='ajax-loader')
         h1 Welcome to use a service that backups your files from dropbox to sendspace!
         div(class='inline')
-            form(action='/dbauth')
-                p: button(type='submit') Authenticate with dropbox!
+            form(action='/dbauth' id='dropbox-form')
+                div: button(type='submit') Authenticate with dropbox!
                 if dbauth
                     p Dropbox authentication successful!
-            form(id='sendspace_form')
-                p Sendspace email
+            form(id='sendspace-form')
+                div
+                    span Sendspace email
                     input(type='textfield' name='user')
-                p Sendspace password
+                div
+                    span Sendspace password
                     input(type='password' name='password')
-                p
+                div
                     input(type='hidden' name='dbaccesstoken' value=dbaccesstoken)
             button(id='sync-start') Start synchronizing!
         div(class='inline')
