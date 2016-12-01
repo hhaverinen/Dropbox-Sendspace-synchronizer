@@ -99,6 +99,9 @@ app.post('/synchronize', function(req, res) {
     var user = req.body.user;
     var password = req.body.password;
     var dbaccesstoken = req.body.dbaccesstoken;
+    console.log(user);
+    console.log(password);
+    console.log(dbaccesstoken);
 
     // synchronize files and return response
     synchronizer(dbaccesstoken, user, password).then(function() {

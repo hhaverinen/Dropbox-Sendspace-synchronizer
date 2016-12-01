@@ -3,9 +3,9 @@
  * @return {boolean} true if everything's alright, false otherwise
  */
 var validateFields = function() {
-    var $user = $('#sendspace-form input[name=user');
-    var $password = $('#sendspace-form input[name=password');
-    var $dbaccesstoken = $('#sendspace-form input[name=dbaccesstoken');
+    var $user = $('#sendspace-form input[name=user]');
+    var $password = $('#sendspace-form input[name=password]');
+    var $dbaccesstoken = $('#sendspace-form input[name=dbaccesstoken]');
 
     if (!$dbaccesstoken.val()) {
         $('#response').text('Please authenticate with dropbox.');
@@ -33,7 +33,7 @@ var startSync = function(e) {
         // clear error message
         $('#response').text('');
 
-        var $form = $('#sendspace_form');
+        var $form = $('#sendspace-form');
 
         $.ajax({
             type: 'POST',
