@@ -1,7 +1,6 @@
-# TIES532 Henri Haverinen
+# Dropbox Sendspace synchronizer
 
-"RESTful web services" task for course TIES532. This project delivers NodeJS server with very simple UI for
-synchronizing users files from dropbox service to sendspace.
+Originally "RESTful web services" task for course TIES532 at University of Jyväskylä. This project delivers NodeJS server with very simple UI for synchronizing users files from dropbox service to sendspace.
 
 Table of contents
 ---
